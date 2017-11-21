@@ -5,10 +5,19 @@
 #files) into a list of function signatures that ruby ffi can understand.
 #
 
+require 'ffi'
+
 class Signature < Struct.new(:name, :return_type, :arguments)
   def to_s
     "[:#{name}, [#{arguments.map{|a|a.inspect}.join(', ')}], #{return_type.inspect}]"
   end
+end
+
+class L_RB_TYPE < FFI::Union
+  layout :itype, :int64,
+         :utype, :uint64,
+         :ftype, :double,
+         :ptype, :pointer
 end
 
 TYPE_MAPPING = {
@@ -16,12 +25,16 @@ TYPE_MAPPING = {
   'l_uint16' => :uint16,
   'l_int32' => :int32,
   'l_uint32' => :uint32,
+  'l_uint64' => :uint64,
   'l_float32' => :float,
   'l_float64' => :double,
   'void' => :void,
   'char' => :char,
   'size_t' => :uint64,
-  'L_TIMER' => :pointer
+  'L_TIMER' => :pointer,
+  'RB_TYPE' => L_RB_TYPE,
+  'alloc_fn' => :pointer,
+  'dealloc_fn' => :pointer
 }
 
 def get_type(s)
