@@ -68,6 +68,15 @@ module Leptonica
             end
         end
 
+        def self.readMem(data)
+            pointer = LeptonicaFFI.pixReadMem(data, data.bytesize)
+            if(pointer.null?)
+                nil
+            else
+                Pix.new(pointer)
+            end
+        end
+
         def self.create(w, h, d, xres=72, yres=72)
             pointer = LeptonicaFFI.pixCreate(w, h, d)
             LeptonicaFFI.pixSetXRes(pointer, xres)
@@ -87,6 +96,22 @@ module Leptonica
 
         def write(filename, format = :default)
             LeptonicaFFI.pixWrite(filename, pointer, FILE_FORMAT_MAPPING[format])
+        end
+
+        def writeMemJpeg(quality=85, progressive=0)
+            data = FFI::MemoryPointer.new(:pointer)
+            data_len = FFI::MemoryPointer.new(:size_t)
+            if (LeptonicaFFI.pixWriteMemJpeg(data, data_len, pointer, quality, progressive))
+                result = data.typecast(:pointer).read_string(data_len.typecast(:size_t))
+                LibC.free(data.typecast(:pointer))
+                result
+            else
+                nil
+            end
+        end
+
+        def writeStreamJpeg(fd, quality=85, progressive=0)
+            LeptonicaExtraFFI._pixWriteStreamJpeg(fd.to_i, pointer, quality, progressive)
         end
 
         def width
@@ -503,6 +528,16 @@ module Leptonica
             Pix.new(LeptonicaFFI.pixScaleGray2xLI(pointer))
         end
 
+        def scale(scalex, scaley)
+            Pix.new(LeptonicaFFI.pixScale(pointer, scalex, scaley))
+        end
+
+        def resize(w, h)
+            scalex = w.fdiv self.width
+            scaley = h.fdiv self.height
+            Pix.new(LeptonicaFFI.pixScale(pointer, scalex, scaley))
+        end
+
         ###
         # Enhance
         ###
@@ -542,6 +577,10 @@ module Leptonica
             else
                 Colormap.new(cmap_pointer)
             end
+        end
+
+        def setNoChromaSampling()
+            LeptonicaFFI.pixSetSpecial(pointer, 1)
         end
     end
 

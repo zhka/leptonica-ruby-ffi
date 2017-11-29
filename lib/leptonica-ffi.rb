@@ -1,9 +1,32 @@
 require 'rubygems'
 require 'ffi'
+require 'ffi/extra'
+require 'ffi/inline'
+
+module LibC
+  extend FFI::Library
+  ffi_lib FFI::Library::LIBC
+
+  attach_function :free, [:pointer], :void
+
+end
+
+module LeptonicaExtraFFI extend FFI::Inline
+    inline do |c|
+        c.include 'leptonica/allheaders.h'
+        c.libraries 'lept'
+        c.function %{
+            int _pixWriteStreamJpeg (int fd, PIX* pix, int quality, int progressive) {
+               FILE* file = fdopen(fd, "wb");
+               return pixWriteStreamJpeg(file, pix, quality, progressive);
+            }
+        }, blocking: true
+    end
+end
 
 module LeptonicaFFI
     extend FFI::Library
-    ffi_lib ['liblept', 'liblept.so.1.74']
+    ffi_lib ['liblept', 'liblept5', 'liblept5.so', 'liblept.so.1.74']
 
     class L_RB_TYPE < FFI::Union
         layout :itype, :int64,
@@ -2601,7 +2624,7 @@ module LeptonicaFFI
         [:stringReplace, [:pointer, :pointer], :int32],
         [:stringLength, [:pointer, :uint64], :int32],
         [:stringCat, [:pointer, :uint64, :pointer], :int32],
-        [:stringConcatNew, [:pointer, :pointer], :pointer],
+        [:stringConcatNew, [:pointer, :varargs], :pointer],
         [:stringJoin, [:pointer, :pointer], :pointer],
         [:stringJoinIP, [:pointer, :pointer], :int32],
         [:stringReverse, [:pointer], :pointer],
